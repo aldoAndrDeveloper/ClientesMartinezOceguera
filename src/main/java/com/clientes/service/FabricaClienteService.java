@@ -43,7 +43,7 @@ public class FabricaClienteService {
     }
 
     private static String dateFormat;
-    static void validarFecha(String fechaDeNacimiento) throws DateFormatException {
+    public void validarFecha(String fechaDeNacimiento) throws DateFormatException {
 
 
         DateValidatorUsingDateFormat validator = new DateValidatorUsingDateFormat("dd/mm/yyyy");

@@ -1,7 +1,9 @@
 package com.clientes.controller;
 
 import com.clientes.dto.ClienteDto;
+import com.clientes.exceptions.DateFormatException;
 import com.clientes.service.ClienteService;
+import com.clientes.service.DateValidatorUsingDateFormat;
 import com.clientes.service.FabricaClienteService;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,31 +25,42 @@ public class ClienteController {
     @Autowired
     private ClienteService clienteService;
     @PostMapping("/guardar")
-    public ResponseEntity <ClienteDto> save(@RequestBody ClienteDto clienteDto){
+    public ResponseEntity <ClienteDto> save(@RequestBody ClienteDto clienteDto) throws DateFormatException {
+        FabricaClienteService fabricaClienteService = new FabricaClienteService();
+        /**Usamos este método para validar que el formato de fecha sea correcto
+         * Si no lo es se arrojará la excepción que creamos con el mensaje:
+         * "El formato de fecha no es válido, asegurate de ser dd/mm/aaaa"**/
+
+        fabricaClienteService.validarFecha(clienteDto.getEdad());
+        //Si no falla entonces se agregará exitosamente el dato en la tabla
         return new ResponseEntity<>( clienteService.save(clienteDto), HttpStatus.OK);
     }
 
     @GetMapping("/todos")
     public ResponseEntity<List<ClienteDto>> findAll(){
+        //Para convertir la fecha de nacimiento a la edad actual haremos lo siguiente
 
+        //1.-Vamos a llamar la lista de clientes
         List<ClienteDto> clienteDtoList =  clienteService.findAll();
         FabricaClienteService fabricaClienteService = new FabricaClienteService();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/MM/yyyy");
-        LocalDateTime now = LocalDateTime.now();
+        //2.-Se da el formato de fecha en este caso será dd/mm/yyyy
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+        //3.-Sacamos la fecha actual
+        Calendar todayCalendar = Calendar.getInstance();
+        //Esta variable la usaremos para darle el valor de la fecha de nacimiento
+        Calendar birthdayCalendar = Calendar.getInstance();
+
         try{
             System.out.println("ClienteDTOList.size () = "+clienteDtoList.size());
 
             for(int i=0;i<clienteDtoList.size();i++){
-               // fabricaClienteService = new FabricaClienteService();
-               // System.out.println("valor = "+Integer.toString());
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
+                //4.- iteramos la lista para 1 por 1 sacar la fecha de nacimiento y validar el formato
                 Date birthDate = simpleDateFormat.parse(clienteDtoList.get(i).getEdad());
-                Calendar birthdayCalendar = Calendar.getInstance();
+                //le agregamos la fecha de nacimiento
                 birthdayCalendar.setTime(birthDate);
-                Calendar todayCalendar = Calendar.getInstance();
+                //5.-Restmos el año actual - el año guardado
                 int age = todayCalendar.get(Calendar.YEAR) - birthdayCalendar.get(Calendar.YEAR);
-
-                // fabricaClienteService.calculateAge(LocalDate.parse(clienteDtoList.get(i).getEdad(),formatter), LocalDate.parse(formatter.format(now)));
+                //agregamos la edad al JSON
                 clienteDtoList.get(i).setEdad(Integer.toString(age)+" años");
             }
         }catch (Exception ex){
@@ -79,8 +92,4 @@ public class ClienteController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
-
-
-
-
 }
